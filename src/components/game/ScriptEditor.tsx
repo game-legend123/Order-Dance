@@ -134,8 +134,8 @@ export const ScriptEditor: FC<ScriptEditorProps> = ({
                 ))}
               </div>
             ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                <p>Kéo lệnh hoặc nhấn nút để tạo kịch bản.</p>
+              <div className="flex items-center justify-center h-full text-center text-muted-foreground p-4">
+                <p>Thêm các lệnh ở trên để tạo kịch bản di chuyển cho nhân vật.</p>
               </div>
             )}
           </ScrollArea>

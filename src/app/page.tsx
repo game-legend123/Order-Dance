@@ -5,7 +5,7 @@ import type { Command, Direction, GameStatus, Position } from "@/lib/types";
 import { GameBoard } from "@/components/game/GameBoard";
 import { ScriptEditor } from "@/components/game/ScriptEditor";
 import { GameStatusDialog } from "@/components/game/GameStatusDialog";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DndContext,
   closestCenter,
@@ -21,7 +21,7 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Award } from "lucide-react";
+import { Award, Target, ShieldAlert, Bot } from "lucide-react";
 
 const GRID_SIZE = 10;
 const STEP_DURATION_MS = 300;
@@ -76,24 +76,24 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (gameStatus === "win" || gameStatus === "lose") {
-      // The dialog will handle the next actions
-    } else {
-      const isAtTarget = playerPos.x === TARGET_POSITION.x && playerPos.y === TARGET_POSITION.y;
-      if (isAtTarget) {
-        setGameStatus("win");
-        const finalScore = Math.max(0, BASE_WIN_SCORE - (script.length * COMMAND_COST));
-        setScore(finalScore);
-        return;
-      }
-      
-      const hasCollision = enemies.some(
-        (enemy) => enemy.x === playerPos.x && enemy.y === playerPos.y
-      );
-      if (hasCollision) {
-        setGameStatus("lose");
-        setScore(0);
-      }
+    if (gameStatus === "running" || gameStatus === "win" || gameStatus === "lose") {
+      return; 
+    }
+  
+    const isAtTarget = playerPos.x === TARGET_POSITION.x && playerPos.y === TARGET_POSITION.y;
+    if (isAtTarget) {
+      setGameStatus("win");
+      const finalScore = Math.max(0, BASE_WIN_SCORE - (script.length * COMMAND_COST));
+      setScore(finalScore);
+      return;
+    }
+    
+    const hasCollision = enemies.some(
+      (enemy) => enemy.x === playerPos.x && enemy.y === playerPos.y
+    );
+    if (hasCollision) {
+      setGameStatus("lose");
+      setScore(0);
     }
   }, [playerPos, enemies, gameStatus, script.length]);
   
@@ -125,18 +125,13 @@ export default function Home() {
   };
 
   const runScript = async () => {
+    resetGame();
+    await new Promise(r => setTimeout(r, 100)); // Allow state to reset
+
     setGameStatus("running");
     let currentPos = { ...INITIAL_PLAYER_POSITION };
     let currentDir = INITIAL_PLAYER_DIRECTION;
     let currentEnemies = [...INITIAL_ENEMIES.map(e => e.position)];
-    
-    // Reset positions before running
-    setPlayerPos(currentPos);
-    setPlayerDir(currentDir);
-    setEnemies(currentEnemies);
-    setScore(0);
-
-    await new Promise(resolve => setTimeout(resolve, STEP_DURATION_MS));
 
     for (let i = 0; i < script.length; i++) {
       setCurrentStep(i);
@@ -176,19 +171,19 @@ export default function Home() {
            break;
       }
       
+      currentEnemies = currentEnemies.map((p, idx) => INITIAL_ENEMIES[idx].pattern(p));
+      
       setPlayerPos(currentPos);
       setPlayerDir(currentDir);
-      
-      currentEnemies = currentEnemies.map((p, idx) => INITIAL_ENEMIES[idx].pattern(p));
       setEnemies(currentEnemies);
-      
-      await new Promise(resolve => setTimeout(resolve, STEP_DURATION_MS));
       
       const isAtTarget = currentPos.x === TARGET_POSITION.x && currentPos.y === TARGET_POSITION.y;
       if (isAtTarget) {
+        setGameStatus("win");
         const finalScore = Math.max(0, BASE_WIN_SCORE - (script.length * COMMAND_COST));
         setScore(finalScore);
-        setGameStatus("win");
+        await new Promise(resolve => setTimeout(resolve, STEP_DURATION_MS));
+        setCurrentStep(null);
         return;
       }
 
@@ -199,8 +194,12 @@ export default function Home() {
       if (hasCollision) {
         setGameStatus("lose");
         setScore(0);
+        await new Promise(resolve => setTimeout(resolve, STEP_DURATION_MS));
+        setCurrentStep(null);
         return;
       }
+
+      await new Promise(resolve => setTimeout(resolve, STEP_DURATION_MS));
     }
     
     // If script finishes without win/loss
@@ -214,24 +213,53 @@ export default function Home() {
         <header className="text-center space-y-2">
           <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">Vũ Điệu Trật Tự</h1>
           <p className="text-muted-foreground">Lập trình vũ đạo, chinh phục pattern.</p>
-          <div className="flex items-center justify-center gap-2 text-xl font-semibold text-accent">
-            <Award className="h-6 w-6" />
-            <span>Điểm: {score}</span>
-          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full max-w-7xl">
-          <Card className="lg:col-span-2 aspect-square">
-             <GameBoard
-                gridSize={GRID_SIZE}
-                playerPos={playerPos}
-                playerDir={playerDir}
-                enemies={enemies}
-                targetPos={TARGET_POSITION}
-             />
-          </Card>
+          <div className="lg:col-span-2 flex flex-col gap-4">
+            <Card className="aspect-square">
+               <GameBoard
+                  gridSize={GRID_SIZE}
+                  playerPos={playerPos}
+                  playerDir={playerDir}
+                  enemies={enemies}
+                  targetPos={TARGET_POSITION}
+               />
+            </Card>
+            <Card className="hidden lg:block">
+              <CardContent className="p-4 grid grid-cols-3 gap-4 text-sm">
+                  <div className="flex items-center gap-3">
+                    <Target className="h-8 w-8 text-green-500" />
+                    <div>
+                      <p className="font-bold">Mục tiêu (Thắng)</p>
+                      <p className="text-muted-foreground">Đưa nhân vật đến ô màu xanh lá.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <ShieldAlert className="h-8 w-8 text-destructive" />
+                    <div>
+                      <p className="font-bold">Va chạm (Thua)</p>
+                      <p className="text-muted-foreground">Tránh va vào các ô màu đỏ của kẻ địch.</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Bot className="h-8 w-8 text-primary" />
+                     <div>
+                      <p className="font-bold">Kẻ địch</p>
+                      <p className="text-muted-foreground">Di chuyển theo một quy luật cố định.</p>
+                    </div>
+                  </div>
+              </CardContent>
+            </Card>
+          </div>
           
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 flex flex-col gap-4">
+             <Card>
+              <CardContent className="p-4 flex items-center justify-center gap-2 text-xl font-semibold text-accent">
+                <Award className="h-6 w-6" />
+                <span>Điểm: {score}</span>
+              </CardContent>
+            </Card>
             <SortableContext items={script} strategy={verticalListSortingStrategy}>
               <ScriptEditor
                   script={script}
@@ -241,7 +269,10 @@ export default function Home() {
                   onRemoveCommand={removeCommand}
                   onClearScript={clearScript}
                   onRunScript={runScript}
-                  onResetGame={resetGame}
+                  onResetGame={() => {
+                    resetGame();
+                    clearScript();
+                  }}
               />
             </SortableContext>
           </div>

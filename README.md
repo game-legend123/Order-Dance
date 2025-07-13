@@ -1,5 +1,7 @@
 # Vũ Điệu Trật Tự (Order Dance)
 
+![Screenshot of the game "Vũ Điệu Trật Tự"](https://storage.googleapis.com/genai-downloads/order-dance-screenshot.png)
+
 Chào mừng bạn đến với "Vũ Điệu Trật Tự"! Đây là một trò chơi giải đố logic được xây dựng bằng Next.js, nơi bạn sẽ vận dụng tư duy lập trình để điều khiển nhân vật vượt qua thử thách.
 
 

@@ -21,12 +21,15 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
+import { Award } from "lucide-react";
 
 const GRID_SIZE = 10;
 const STEP_DURATION_MS = 300;
 const TARGET_POSITION: Position = { x: 9, y: 9 };
 const INITIAL_PLAYER_POSITION: Position = { x: 0, y: 0 };
 const INITIAL_PLAYER_DIRECTION: Direction = "right";
+const BASE_WIN_SCORE = 1000;
+const COMMAND_COST = 10;
 
 const INITIAL_ENEMIES = [
   {
@@ -52,6 +55,7 @@ export default function Home() {
   const [enemies, setEnemies] = useState(INITIAL_ENEMIES.map(e => e.position));
   const [gameStatus, setGameStatus] = useState<GameStatus>("idle");
   const [currentStep, setCurrentStep] = useState<number | null>(null);
+  const [score, setScore] = useState(0);
 
   const isExecuting = gameStatus === "running";
 
@@ -68,6 +72,7 @@ export default function Home() {
     setEnemies(INITIAL_ENEMIES.map(e => e.position));
     setGameStatus("idle");
     setCurrentStep(null);
+    setScore(0);
   }, []);
 
   useEffect(() => {
@@ -77,6 +82,8 @@ export default function Home() {
       const isAtTarget = playerPos.x === TARGET_POSITION.x && playerPos.y === TARGET_POSITION.y;
       if (isAtTarget) {
         setGameStatus("win");
+        const finalScore = Math.max(0, BASE_WIN_SCORE - (script.length * COMMAND_COST));
+        setScore(finalScore);
         return;
       }
       
@@ -85,9 +92,10 @@ export default function Home() {
       );
       if (hasCollision) {
         setGameStatus("lose");
+        setScore(0);
       }
     }
-  }, [playerPos, enemies, gameStatus]);
+  }, [playerPos, enemies, gameStatus, script.length]);
   
 
   const addCommand = (type: Command["type"]) => {
@@ -126,6 +134,7 @@ export default function Home() {
     setPlayerPos(currentPos);
     setPlayerDir(currentDir);
     setEnemies(currentEnemies);
+    setScore(0);
 
     await new Promise(resolve => setTimeout(resolve, STEP_DURATION_MS));
 
@@ -176,16 +185,20 @@ export default function Home() {
       await new Promise(resolve => setTimeout(resolve, STEP_DURATION_MS));
       
       const isAtTarget = currentPos.x === TARGET_POSITION.x && currentPos.y === TARGET_POSITION.y;
+      if (isAtTarget) {
+        const finalScore = Math.max(0, BASE_WIN_SCORE - (script.length * COMMAND_COST));
+        setScore(finalScore);
+        setGameStatus("win");
+        return;
+      }
+
       const hasCollision = currentEnemies.some(
         (enemy) => enemy.x === currentPos.x && enemy.y === currentPos.y
       );
 
-      if (isAtTarget) {
-        setGameStatus("win");
-        return;
-      }
       if (hasCollision) {
         setGameStatus("lose");
+        setScore(0);
         return;
       }
     }
@@ -198,9 +211,13 @@ export default function Home() {
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <main className="flex flex-col min-h-screen items-center justify-center p-4 md:p-8 space-y-4 bg-background dark:bg-background">
-        <header className="text-center">
+        <header className="text-center space-y-2">
           <h1 className="text-4xl md:text-5xl font-bold font-headline text-primary">Vũ Điệu Trật Tự</h1>
           <p className="text-muted-foreground">Lập trình vũ đạo, chinh phục pattern.</p>
+          <div className="flex items-center justify-center gap-2 text-xl font-semibold text-accent">
+            <Award className="h-6 w-6" />
+            <span>Điểm: {score}</span>
+          </div>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 w-full max-w-7xl">
@@ -232,6 +249,7 @@ export default function Home() {
 
         <GameStatusDialog
           status={gameStatus}
+          score={score}
           onReset={() => {
             resetGame();
             clearScript();

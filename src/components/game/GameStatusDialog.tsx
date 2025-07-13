@@ -16,11 +16,12 @@ import { Button } from "@/components/ui/button";
 
 interface GameStatusDialogProps {
   status: GameStatus;
+  score: number;
   onReset: () => void;
   onTryAgain: () => void;
 }
 
-export const GameStatusDialog: FC<GameStatusDialogProps> = ({ status, onReset, onTryAgain }) => {
+export const GameStatusDialog: FC<GameStatusDialogProps> = ({ status, score, onReset, onTryAgain }) => {
   const isOpen = status === "win" || status === "lose";
   const isWin = status === "win";
 
@@ -33,7 +34,7 @@ export const GameStatusDialog: FC<GameStatusDialogProps> = ({ status, onReset, o
           </AlertDialogTitle>
           <AlertDialogDescription>
             {isWin
-              ? "Bạn đã hoàn thành vũ điệu một cách hoàn hảo. Pattern đã được chinh phục!"
+              ? `Bạn đã hoàn thành vũ điệu một cách hoàn hảo và đạt được ${score} điểm. Pattern đã được chinh phục!`
               : "Vũ điệu đã sai nhịp. Hãy thử lại một lộ trình khác."}
           </AlertDialogDescription>
         </AlertDialogHeader>
